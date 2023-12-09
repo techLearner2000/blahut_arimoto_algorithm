@@ -6,7 +6,7 @@
 # The capacity of a channel is defined by <br>
 # $C = \max_{r(x)} I(X;Y) = \max_{r(x)} \sum_{x} \sum_{y} r(x) p(y|x) \log \frac{r(x) p(y|x)}{r(x) \sum_{\tilde{x}} r(\tilde{x})p(y|\tilde{x})}$
 
-# In[79]:
+# In[13]:
 
 
 import numpy as np
@@ -67,7 +67,7 @@ def blahut_arimoto(p_y_x: np.ndarray,  log_base: float = 2, thresh: float = 1e-1
 # The capacity of this channel  <br> 
 # $C = 1 - H_b(P_e)$
 
-# In[76]:
+# In[14]:
 
 
 e = 0.2
@@ -89,7 +89,7 @@ print('Anatliyic capacity: ', (1 - H_P_e))
 # The capacity of this channel is  <br> 
 # $C = 1 - P_e$.
 
-# In[77]:
+# In[15]:
 
 
 e = 0.1
@@ -107,14 +107,76 @@ print('Anatliyic capacity: ', (1 - e))
 # # Converting to executable 
 # Create python file that could be imported to another file.
 
-# In[78]:
+# In[16]:
 
 
 get_ipython().system(' jupyter nbconvert blahut_arimoto_algorithm.ipynb --to="python" --output-dir .')
 
 
-# In[ ]:
+# # Discrete the alphabet
+
+# In[17]:
 
 
+from scipy.stats import norm
 
+def discretize_alphabet(A, N, M):
+    """
+    Discretize the input and output alphabets for the Gaussian noise channel.
+
+    Args:
+    A (float): Peak amplitude constraint for the input.
+    N (int): Number of intervals to discretize the input.
+    M (int): Number of intervals to discretize the output.
+
+    Returns:
+    x (np.array): Discretized input alphabet.
+    y (np.array): Discretized output alphabet.
+    p_y_x (np.array): Conditional probability matrix P(Y|X).
+    """
+    # Discretize the input alphabet
+    x = np.linspace(-A, A, N)
+
+    # Estimate the range for the output alphabet and discretize it
+    y = np.linspace(-A - 3, A + 3, M)
+
+    # Initialize the conditional probability matrix
+    p_y_x = np.zeros((M, N))
+
+    # Calculate the conditional probabilities P(Y|X)
+    for i in range(N):
+        # For each discretized input, compute the distribution of the output
+        p_y_x[:, i] = norm.pdf(y, loc=x[i], scale=1)
+
+    # Normalize each column to ensure probabilities sum to 1
+    p_y_x /= p_y_x.sum(axis=0, keepdims=True)
+
+    return x, y, p_y_x
+
+
+# # Application
+
+# In[20]:
+
+
+# Example usage for different values of A
+A_values = [0.1, 1, 10]
+results = []
+
+for A in A_values:
+    N = 50  # Number of intervals for the input
+    M = 100  # Number of intervals for the output
+
+    # Discretize the input and output alphabets and get the conditional probability matrix
+    x, y, p_y_x = discretize_alphabet(A, N, M)
+
+    # Compute the channel capacity and the optimal input distribution
+    C, r = blahut_arimoto(p_y_x)
+    results.append((A, C, r))
+
+# Display the results
+for result in results:
+    print(f"Peak amplitude constraint (A): {result[0]}")
+    print(f"Computed Channel Capacity: {result[1]}")
+    print(f"Optimal Input Distribution: {result[2]}\n")
 
